@@ -2,20 +2,6 @@ DIR_DOWN = "down"
 DIR_ACROSS = "across"
 
 
-def render_grid(grid: dict[tuple[int, int], str]) -> str:
-    rows = [r for (r, c) in grid.keys()]
-    cols = [c for (r, c) in grid.keys()]
-    min_r, max_r = min(rows), max(rows)
-    min_c, max_c = min(cols), max(cols)
-    lines = []
-    for r in range(min_r, max_r + 1):
-        row_chars = []
-        for c in range(min_c, max_c + 1):
-            row_chars.append(grid.get((r, c), " "))
-        lines.append(" ".join(row_chars).rstrip())
-    return "\n".join(lines)
-
-
 def can_place(
     grid: dict[tuple[int, int], str],
     word: str,

@@ -36,19 +36,19 @@ def is_end_punctuation(token: str) -> bool:
 
 
 def is_any_punctuation(token) -> bool:
-    return len(token) == 0 and (is_end_punctuation(token) or token[-1] in SPLIT_PUNCT)
+    return is_end_punctuation(token) or token[0] in SPLIT_PUNCT
 
 
-def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str], str]:
+def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str]]:
     """Строит блок и возвращает сетку, остаток токенов, пунктуацию"""
     grid: dict[tuple[int, int], str] = {}
     if not tokens:
-        return grid, [], ""
+        return grid, []
 
     vertical = tokens[0]
     place_word(grid, vertical, DIR_DOWN, 0, 0)
-    if is_end_punctuation(vertical):
-        return grid, tokens[1:], ""
+    if is_any_punctuation(vertical):
+        return grid, tokens[1:]
 
     v_len = len(vertical)
     vertical_coords = {(r, 0) for r in range(v_len)}
@@ -57,8 +57,6 @@ def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str
     i = 1
     while i < len(tokens):
         tok = tokens[i]
-        if is_any_punctuation(tok):
-            return grid, tokens[i + 1 :], tok
 
         placed = False
         for r in range(row_ptr, v_len):
@@ -79,14 +77,14 @@ def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str
                 break
 
         if not placed:
-            return grid, tokens[i:], ""
+            return grid, tokens[i:]
         i += 1
 
-    return grid, [], ""
+    return grid, []
 
 
 def merge_blocks(
-    blocks: list[dict[tuple[int, int], str]], puncts: list[str]
+    blocks: list[dict[tuple[int, int], str]],
 ) -> dict[tuple[int, int], str]:
     grid: dict[tuple[int, int], str] = {}
     col_offset = 0
@@ -97,7 +95,6 @@ def merge_blocks(
         b_cols = [c for (r, c) in block]
         min_c, max_c = min(b_cols), max(b_cols)
 
-        punct = puncts[i]
         if i > 0:
             col_offset -= min_c
 
@@ -125,11 +122,7 @@ def merge_blocks(
             for (r, c), ch in block.items():
                 grid[(r, c + col_offset)] = ch
 
-        col_offset += max_c + 1
-
-        if punct in SPLIT_PUNCT:
-            grid[(0, max_c + col_offset)] = punct
-        col_offset += 1
+        col_offset += max_c + 2
 
     return grid
 
@@ -138,13 +131,11 @@ def build_grid(phrase: str) -> tuple[dict[tuple[int, int], str], list[dict]]:
     tokens = tokenize_with_end_punct(phrase)
 
     blocks: list[dict[tuple[int, int], str]] = []
-    puncts: list[str] = []
 
     remaining = tokens
     while remaining:
-        block, remaining, punct = build_block(remaining)
+        block, remaining = build_block(remaining)
         blocks.append(block)
-        puncts.append(punct)
 
-    grid = merge_blocks(blocks, puncts)
+    grid = merge_blocks(blocks)
     return grid, blocks
