@@ -93,10 +93,10 @@ if __name__ == "__main__":
         "Лошадь может дожить до конца своей жизни",
     ]
 
-    g, _ = build_grid(examples[-1])
-    print(render_grid(g))
-    # for ph in examples:
-    #     g, placed = build_grid(ph)
-    #     print(f"Phrase: {ph}")
-    #     print(render_grid(g))
-    #     print("---")
+    # g, _ = build_grid(examples[-1])
+    # print(render_grid(g))
+    for ph in examples:
+        g, placed = build_grid(ph)
+        print(f"Phrase: {ph}")
+        print(render_grid(g))
+        print("---")

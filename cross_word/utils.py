@@ -1,6 +1,7 @@
 DIR_DOWN = "down"
 DIR_ACROSS = "across"
 
+
 def render_grid(grid: dict[tuple[int, int], str]) -> str:
     rows = [r for (r, c) in grid.keys()]
     cols = [c for (r, c) in grid.keys()]
