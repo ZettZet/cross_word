@@ -1,6 +1,6 @@
 import re
 
-from cross.utils import DIR_ACROSS, DIR_DOWN, can_place, place_word
+from cross_word.utils import DIR_ACROSS, DIR_DOWN, can_place, place_word
 
 
 def build_block(

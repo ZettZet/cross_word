@@ -1,5 +1,5 @@
-from cross.cross_words import build_grid
-from cross.utils import render_grid
+from cross_word.cross_words import build_grid
+from cross_word.utils import render_grid
 
 if __name__ == "__main__":
     examples = [
