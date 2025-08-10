@@ -1,52 +1,73 @@
 import re
-
+from icecream import ic
 from cross_word.utils import DIR_ACROSS, DIR_DOWN, can_place, place_word
 
 END_PUNCT = {".", "?", "!"}  # приклеиваются к слову
 SPLIT_PUNCT = {",", "—", ";", ":"}  # в отдельную колонку
 
 
-def build_block(
-    tokens: list[str], min_bridge_len: int = 3
-) -> tuple[dict[tuple[int, int], str], list[str], str]:
-    """
-    Строит блок из токенов.
-    Возвращает:
-    - grid: словарь {(row, col): char} в локальных координатах
-    - remaining_tokens: список токенов, которые остались неиспользованными
-    - end_punct: конечный или разделительный знак, который закрыл блок ("" если нет)
-    """
+def tokenize_with_end_punct(phrase: str) -> list[str]:
+    """Разбивает фразу на токены, приклеивая конечный знак пунктуации к слову"""
+    raw_tokens = re.findall(r"[А-Яа-яЁёA-Za-z0-9]+|[^\s]", phrase)
+    tokens = []
+    i = 0
+    while i < len(raw_tokens):
+        tok = raw_tokens[i]
+        if is_word(tok):
+            # если следующий токен — конечная пунктуация, приклеиваем
+            if i + 1 < len(raw_tokens) and is_end_punctuation(raw_tokens[i + 1]):
+                tokens.append((tok + raw_tokens[i + 1]).upper())
+                i += 2
+                continue
+            else:
+                tokens.append(tok.upper())
+        else:
+            tokens.append(tok)
+        i += 1
+    return tokens
+
+
+def is_word(token: str) -> bool:
+    return re.match(r"[\wА-Яа-яЁё]", token)
+
+
+def is_end_punctuation(token: str) -> bool:
+    return token[-1] in END_PUNCT
+
+
+def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str], str]:
+    """Строит блок и возвращает сетку, остаток токенов, пунктуацию"""
     grid: dict[tuple[int, int], str] = {}
     if not tokens:
         return grid, [], ""
 
-    # первый токен всегда вертикаль
     vertical = tokens[0]
     place_word(grid, vertical, DIR_DOWN, 0, 0)
+    if is_end_punctuation(vertical):
+        return grid, tokens[1:], vertical
+
     v_len = len(vertical)
+    vertical_coords = {(r, 0) for r in range(v_len)}
 
     row_ptr = 0
     i = 1
     while i < len(tokens):
-        token = tokens[i]
-
-        # если это пунктуация — закрываем блок
-        if re.match(r"[^\wА-Яа-яЁё]", token):
-            return grid, tokens[i + 1 :], token
+        tok = tokens[i]
+        if is_end_punctuation(tok):
+            return grid, tokens[i + 1 :], tok
 
         placed = False
-        # пытаемся вставить горизонталь
         for r in range(row_ptr, v_len):
-            if token[0] == vertical[0]:
+            if tok[0] == vertical[0]:
                 continue
-            max_left = len(token) // 2
-            for j, ch in enumerate(token):
+            max_left = len(tok) // 2
+            for j, ch in enumerate(tok):
                 if ch == grid[(r, 0)]:
                     start_col = -j
                     if abs(start_col) > max_left:
                         continue
-                    if can_place(grid, token, DIR_ACROSS, r, start_col):
-                        place_word(grid, token, DIR_ACROSS, r, start_col)
+                    if can_place(grid, tok, DIR_ACROSS, r, start_col, vertical_coords):
+                        place_word(grid, tok, DIR_ACROSS, r, start_col)
                         placed = True
                         row_ptr = r + 1
                         break
@@ -54,9 +75,7 @@ def build_block(
                 break
 
         if not placed:
-            # не смогли вставить — закрываем блок и оставляем оставшиеся токены
             return grid, tokens[i:], ""
-
         i += 1
 
     return grid, [], ""
@@ -71,35 +90,25 @@ def merge_blocks(
     for i, block in enumerate(blocks):
         if not block:
             continue
-        b_rows = [r for (r, c) in block]
         b_cols = [c for (r, c) in block]
         min_c, max_c = min(b_cols), max(b_cols)
 
-        # копируем блок с учётом смещения
         for (r, c), ch in block.items():
             grid[(r, c + col_offset)] = ch
 
         punct = puncts[i]
-        if punct in END_PUNCT:
-            # приклеиваем к последней букве вертикали
-            v_cols = [c for (r, c) in block if c == min_c]
-            last_row = max(r for (r, c) in block if c == min_c)
-            grid[(last_row, min_c + col_offset + 1)] = punct
-            col_offset += max_c - min_c + 2
-        elif punct in SPLIT_PUNCT:
-            # отдельная колонка
+        ic(block, max_c, min_c, col_offset)
+        if punct in SPLIT_PUNCT:
             grid[(0, max_c + 1 + col_offset)] = punct
-            col_offset += max_c - min_c + 3
+            col_offset += max_c - min_c + 3  # блок + пробел + пустая колонка
         else:
-            col_offset += max_c - min_c + 2
+            col_offset += max_c - min_c + 2  # блок + пустая колонка
 
     return grid
 
 
 def build_grid(phrase: str) -> tuple[dict[tuple[int, int], str], list[dict]]:
-    # токенизация — слова и отдельные символы
-    tokens = re.findall(r"[А-Яа-яЁёA-Za-z0-9]+|[^\s]", phrase)
-    tokens = [t.upper() if re.match(r"[\wА-Яа-яЁё]", t) else t for t in tokens]
+    tokens = tokenize_with_end_punct(phrase)
 
     blocks: list[dict[tuple[int, int], str]] = []
     puncts: list[str] = []
@@ -110,5 +119,5 @@ def build_grid(phrase: str) -> tuple[dict[tuple[int, int], str], list[dict]]:
         blocks.append(block)
         puncts.append(punct)
 
-    grid = merge_blocks(blocks, puncts)
+    grid = merge_blocks(ic(blocks), puncts)
     return grid, blocks

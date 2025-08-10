@@ -17,13 +17,27 @@ def render_grid(grid: dict[tuple[int, int], str]) -> str:
 
 
 def can_place(
-    grid: dict[tuple[int, int], str], word: str, direction: str, row: int, col: int
+    grid: dict[tuple[int, int], str],
+    word: str,
+    direction: str,
+    row: int,
+    col: int,
+    vertical_coords=None,
 ) -> bool:
+    """Проверка, можно ли поставить слово, без затирания вертикали"""
     dr, dc = (1, 0) if direction == DIR_DOWN else (0, 1)
     for i, ch in enumerate(word):
         r, c = row + dr * i, col + dc * i
-        if (r, c) in grid and grid[(r, c)] != ch:
-            return False
+        if (r, c) in grid:
+            if grid[(r, c)] != ch:
+                return False
+            # запрет на перетирание вертикали
+            if (
+                direction == DIR_ACROSS
+                and vertical_coords
+                and (r, c) not in vertical_coords
+            ):
+                return False
     return True
 
 
