@@ -12,7 +12,7 @@ DIRECTION_DOWN = "down"
 DIRECTION_ACROSS = "across"
 
 WORD_PATTERN = re.compile(r"[\wА-Яа-яЁё]")
-TOKENIZE_PATTERN = re.compile(r"[А-Яа-яЁёA-Za-z0-9-]+|[^\s]")
+TOKENIZE_PATTERN = re.compile(r"[А-Яа-яЁё\w0-9-]+|[^\s]")
 
 def tokenize_with_end_punct(phrase: str) -> TokenList:
     """
