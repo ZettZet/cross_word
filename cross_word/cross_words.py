@@ -1,5 +1,5 @@
 import re
-from icecream import ic
+from itertools import groupby
 from cross_word.utils import DIR_ACROSS, DIR_DOWN, can_place, place_word
 
 END_PUNCT = {".", "?", "!"}  # приклеиваются к слову
@@ -8,7 +8,7 @@ SPLIT_PUNCT = {",", "—", ";", ":"}  # в отдельную колонку
 
 def tokenize_with_end_punct(phrase: str) -> list[str]:
     """Разбивает фразу на токены, приклеивая конечный знак пунктуации к слову"""
-    raw_tokens = re.findall(r"[А-Яа-яЁёA-Za-z0-9]+|[^\s]", phrase)
+    raw_tokens = re.findall(r"[А-Яа-яЁёA-Za-z0-9-]+|[^\s]", phrase)
     tokens = []
     i = 0
     while i < len(raw_tokens):
@@ -35,6 +35,10 @@ def is_end_punctuation(token: str) -> bool:
     return token[-1] in END_PUNCT
 
 
+def is_any_punctuation(token) -> bool:
+    return len(token) == 0 and (is_end_punctuation(token) or token[-1] in SPLIT_PUNCT)
+
+
 def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str], str]:
     """Строит блок и возвращает сетку, остаток токенов, пунктуацию"""
     grid: dict[tuple[int, int], str] = {}
@@ -44,7 +48,7 @@ def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str
     vertical = tokens[0]
     place_word(grid, vertical, DIR_DOWN, 0, 0)
     if is_end_punctuation(vertical):
-        return grid, tokens[1:], vertical
+        return grid, tokens[1:], ""
 
     v_len = len(vertical)
     vertical_coords = {(r, 0) for r in range(v_len)}
@@ -53,12 +57,12 @@ def build_block(tokens: list[str]) -> tuple[dict[tuple[int, int], str], list[str
     i = 1
     while i < len(tokens):
         tok = tokens[i]
-        if is_end_punctuation(tok):
+        if is_any_punctuation(tok):
             return grid, tokens[i + 1 :], tok
 
         placed = False
         for r in range(row_ptr, v_len):
-            if tok[0] == vertical[0]:
+            if r == 0:
                 continue
             max_left = len(tok) // 2
             for j, ch in enumerate(tok):
@@ -93,16 +97,39 @@ def merge_blocks(
         b_cols = [c for (r, c) in block]
         min_c, max_c = min(b_cols), max(b_cols)
 
-        for (r, c), ch in block.items():
-            grid[(r, c + col_offset)] = ch
-
         punct = puncts[i]
-        ic(block, max_c, min_c, col_offset)
-        if punct in SPLIT_PUNCT:
-            grid[(0, max_c + 1 + col_offset)] = punct
-            col_offset += max_c - min_c + 3  # блок + пробел + пустая колонка
+        if i > 0:
+            col_offset -= min_c
+
+        if len(block) == 1:
+            for subindex in (-1, 1):
+                if 0 <= i + subindex < len(blocks):
+                    next_block = blocks[i + subindex]
+                    grouped_rows = [
+                        k
+                        for k, v in groupby(next_block.keys(), lambda p: p[0])
+                        if len(list(v)) > 1
+                    ]
+                    if len(grouped_rows) == 0:
+                        continue
+
+                    row = min(grouped_rows)
+                    (r, c), ch = block.popitem()
+                    grid[(row, c + col_offset)] = ch
+                    break
+            else:
+                (r, c), ch = block.popitem()
+                grid[(r, c + col_offset)] = ch
+
         else:
-            col_offset += max_c - min_c + 2  # блок + пустая колонка
+            for (r, c), ch in block.items():
+                grid[(r, c + col_offset)] = ch
+
+        col_offset += max_c + 1
+
+        if punct in SPLIT_PUNCT:
+            grid[(0, max_c + col_offset)] = punct
+        col_offset += 1
 
     return grid
 
@@ -119,5 +146,5 @@ def build_grid(phrase: str) -> tuple[dict[tuple[int, int], str], list[dict]]:
         blocks.append(block)
         puncts.append(punct)
 
-    grid = merge_blocks(ic(blocks), puncts)
+    grid = merge_blocks(blocks, puncts)
     return grid, blocks
