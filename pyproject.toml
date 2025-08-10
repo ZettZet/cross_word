@@ -10,4 +10,5 @@ dependencies = []
 dev = [
     "icecream>=2.1.5",
     "pytest>=8.4.1",
+    "pytest-timeout>=2.4.0",
 ]
