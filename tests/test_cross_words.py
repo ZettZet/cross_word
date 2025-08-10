@@ -3,14 +3,19 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import pytest
 from cross_word.cross_words import (
     build_grid,
     tokenize_with_end_punct,
-    build_block,
+    build_single_block,
     merge_blocks,
 )
-from cross_word.utils import can_place, place_word, DIR_DOWN, DIR_ACROSS, render_grid
+from cross_word.utils import (
+    can_place_word,
+    place_word_in_grid,
+    DIRECTION_DOWN,
+    DIRECTION_ACROSS,
+    render_grid,
+)
 
 
 def test_tokenize_with_end_punct():
@@ -21,22 +26,32 @@ def test_tokenize_with_end_punct():
 
 def test_can_place_and_place_word():
     grid = {}
-    place_word(grid, "ТЕСТ", DIR_DOWN, 0, 0)
+    place_word_in_grid(grid, "ТЕСТ", DIRECTION_DOWN, 0, 0)
     assert grid[(0, 0)] == "Т"
     assert grid[(3, 0)] == "Т"
     # Проверяем, что новое слово можно поставить горизонтально пересекающимся по букве "Е"
-    assert can_place(
-        grid, "ЕСО", DIR_ACROSS, 1, 0, vertical_coords={(0, 0), (1, 0), (2, 0), (3, 0)}
+    assert can_place_word(
+        grid,
+        "ЕСО",
+        DIRECTION_ACROSS,
+        1,
+        0,
+        vertical_coords={(0, 0), (1, 0), (2, 0), (3, 0)},
     )
     # Нельзя перетерать буквы другим словом
-    assert not can_place(
-        grid, "КОД", DIR_ACROSS, 0, 0, vertical_coords={(0, 0), (1, 0), (2, 0), (3, 0)}
+    assert not can_place_word(
+        grid,
+        "КОД",
+        DIRECTION_ACROSS,
+        0,
+        0,
+        vertical_coords={(0, 0), (1, 0), (2, 0), (3, 0)},
     )
 
 
 def test_build_block_simple():
     tokens = ["ТЕСТ", "ЕСО"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem, punct = build_single_block(tokens)
     assert rem == []
     assert punct == ""
     # В сетке должно быть слово ТЕСТ вертикально
@@ -76,21 +91,25 @@ def test_tokenize_with_end_punct_complex():
 
 def test_can_place_and_place_word_basic():
     grid = {}
-    place_word(grid, "ТЕСТ", DIR_DOWN, 0, 0)
+    place_word_in_grid(grid, "ТЕСТ", DIRECTION_DOWN, 0, 0)
     assert grid[(0, 0)] == "Т"
     assert grid[(3, 0)] == "Т"
 
-    # Проверяем can_place возможное размещение слова пересекающегося буквой
+    # Проверяем can_place_word возможное размещение слова пересекающегося буквой
     vertical_coords = {(r, 0) for r in range(4)}  # coords "ТЕСТ"
-    assert can_place(grid, "ЕСО", DIR_ACROSS, 1, 0, vertical_coords=vertical_coords)
+    assert can_place_word(
+        grid, "ЕСО", DIRECTION_ACROSS, 1, 0, vertical_coords=vertical_coords
+    )
 
     # Нельзя положить слово перезаписывающее буквы без совпадения
-    assert not can_place(grid, "КОД", DIR_ACROSS, 0, 0, vertical_coords=vertical_coords)
+    assert not can_place_word(
+        grid, "КОД", DIRECTION_ACROSS, 0, 0, vertical_coords=vertical_coords
+    )
 
 
 def test_build_block_simple():
     tokens = ["ТЕСТ", "ЕСО"]
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     assert rem == []
 
     # Проверка наличия вертикального слова ТЕСТ
@@ -110,7 +129,7 @@ def test_build_block_simple():
 def test_build_block_with_punctuation():
     tokens = ["ТЕСТ", ",", "ЕСО", "?"]
     # Поскольку запятая в отдельном токене - блок построится только из "ТЕСТ", потом запятая
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     assert rem == [",", "ЕСО", "?"]
 
 
@@ -147,7 +166,7 @@ def test_render_grid_spacing():
 
 
 def test_build_block_no_tokens():
-    grid, rem = build_block([])
+    grid, rem = build_single_block([])
     assert grid == {}
     assert rem == []
 
@@ -155,7 +174,7 @@ def test_build_block_no_tokens():
 def test_build_block_cannot_place_word():
     # "Невозможно поставить" слово, так как нет пересечений
     tokens = ["ПЫЛ", "АННЫЙ"]
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     assert rem == ["АННЫЙ"]
 
 
@@ -173,18 +192,22 @@ def test_tokenize_with_end_punct_edge_cases():
 
 def test_can_place_word_overlapping_correctly():
     grid = {}
-    place_word(grid, "МАМА", DIR_DOWN, 0, 0)
+    place_word_in_grid(grid, "МАМА", DIRECTION_DOWN, 0, 0)
     vertical_coords = {(r, 0) for r in range(4)}
     # Пытаемся поставить горизонтальное слово "АМ" пересекающееся по букве "А"
-    assert can_place(grid, "АМ", DIR_ACROSS, 1, 0, vertical_coords=vertical_coords)
-    place_word(grid, "АМ", DIR_ACROSS, 1, 0)
+    assert can_place_word(
+        grid, "АМ", DIRECTION_ACROSS, 1, 0, vertical_coords=vertical_coords
+    )
+    place_word_in_grid(grid, "АМ", DIRECTION_ACROSS, 1, 0)
     # Теперь проверить, что наоборот поставить пересечение нельзя (буквы не совпадают)
-    assert not can_place(grid, "АН", DIR_ACROSS, 2, 0, vertical_coords=vertical_coords)
+    assert not can_place_word(
+        grid, "АН", DIRECTION_ACROSS, 2, 0, vertical_coords=vertical_coords
+    )
 
 
 def test_build_block_with_no_intersections():
     tokens = ["ПЫЛ", "АННЫЙ"]
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     assert rem == ["АННЫЙ"]
     # Проверяем, что сетка не пустая, и в ней только первое слово (вертикальное)
     assert grid != {}
@@ -212,7 +235,7 @@ def test_render_grid_empty_grid():
 
 def test_build_block_single_word_with_end_punctuation():
     tokens = ["СЛОВО!"]
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     assert rem == []
     # В сетке должно быть слово вертикально
     for i, ch in enumerate("СЛОВО!"):
@@ -221,7 +244,7 @@ def test_build_block_single_word_with_end_punctuation():
 
 def test_build_block_with_split_punctuation_insertion():
     tokens = ["Тест", ",", "Пункт"]
-    grid, rem = build_block(tokens)
+    grid, rem = build_single_block(tokens)
     # Пунктуация должна быть отделена
     # Остаток должен начинаться с второго слова без запятой
     assert rem == [",", "Пункт"]
@@ -229,7 +252,7 @@ def test_build_block_with_split_punctuation_insertion():
 
 def test_can_place_word_with_vertical_coords_none():
     grid = {}
-    place_word(grid, "ДОМ", DIR_DOWN, 0, 0)
-    # Проверяем can_place без передачи vertical_coords (обязательно True/False)
-    assert can_place(grid, "МО", DIR_ACROSS, 2, 0)  # должно пройти
-    assert not can_place(grid, "НО", DIR_ACROSS, 1, 0)  # конфликт с "ДОМ"
+    place_word_in_grid(grid, "ДОМ", DIRECTION_DOWN, 0, 0)
+    # Проверяем can_place_word без передачи vertical_coords (обязательно True/False)
+    assert can_place_word(grid, "МО", DIRECTION_ACROSS, 2, 0)  # должно пройти
+    assert not can_place_word(grid, "НО", DIRECTION_ACROSS, 1, 0)  # конфликт с "ДОМ"
