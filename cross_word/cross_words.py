@@ -1,6 +1,12 @@
 import re
 from itertools import groupby
-from cross_word.utils import DIR_ACROSS, DIR_DOWN, can_place, place_word
+from cross_word.utils import (
+    DIR_ACROSS,
+    DIR_DOWN,
+    can_place,
+    get_first_dict_element,
+    place_word,
+)
 
 END_PUNCT = {".", "?", "!"}  # приклеиваются к слову
 SPLIT_PUNCT = {",", "—", ";", ":"}  # в отдельную колонку
@@ -111,18 +117,25 @@ def merge_blocks(
                         continue
 
                     row = min(grouped_rows)
-                    (r, c), ch = block.popitem()
+                    (r, c), ch = get_first_dict_element(block)
                     grid[(row, c + col_offset)] = ch
                     break
             else:
-                (r, c), ch = block.popitem()
+                (r, c), ch = get_first_dict_element(block)
                 grid[(r, c + col_offset)] = ch
 
         else:
             for (r, c), ch in block.items():
                 grid[(r, c + col_offset)] = ch
 
-        col_offset += max_c + 2
+        if 0 <= i + 1 < len(blocks):
+            next_block = blocks[i + 1]
+            current_value = get_first_dict_element(block)[1]
+            next_value = get_first_dict_element(next_block)[1]
+            if is_word(current_value) and is_word(next_value):
+                col_offset += 1
+
+        col_offset += max_c + 1
 
     return grid
 

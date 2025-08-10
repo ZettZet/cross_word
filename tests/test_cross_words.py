@@ -90,9 +90,8 @@ def test_can_place_and_place_word_basic():
 
 def test_build_block_simple():
     tokens = ["ТЕСТ", "ЕСО"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem = build_block(tokens)
     assert rem == []
-    assert punct == ""
 
     # Проверка наличия вертикального слова ТЕСТ
     assert all(grid.get((i, 0), None) == ch for i, ch in enumerate("ТЕСТ"))
@@ -111,14 +110,14 @@ def test_build_block_simple():
 def test_build_block_with_punctuation():
     tokens = ["ТЕСТ", ",", "ЕСО", "?"]
     # Поскольку запятая в отдельном токене - блок построится только из "ТЕСТ", потом запятая
-    grid, rem, punct = build_block(tokens)
-    assert punct == ""
+    grid, rem = build_block(tokens)
+    assert rem == [",", "ЕСО", "?"]
 
 
 def test_merge_blocks_basic():
     block1 = {(0, 0): "Т", (1, 0): "Е", (2, 0): "С", (3, 0): "Т"}
     block2 = {(0, 0): "К", (0, 1): "О", (0, 2): "Д"}
-    merged = merge_blocks([block1.copy(), block2.copy()], ["", ""])
+    merged = merge_blocks([block1.copy(), block2.copy()])
     # Проверка, что буквы из обоих блоков есть
     values = set(merged.values())
     assert "Т" in values
@@ -148,18 +147,16 @@ def test_render_grid_spacing():
 
 
 def test_build_block_no_tokens():
-    grid, rem, punct = build_block([])
+    grid, rem = build_block([])
     assert grid == {}
     assert rem == []
-    assert punct == ""
 
 
 def test_build_block_cannot_place_word():
     # "Невозможно поставить" слово, так как нет пересечений
     tokens = ["ПЫЛ", "АННЫЙ"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem = build_block(tokens)
     assert rem == ["АННЫЙ"]
-    assert punct == ""
 
 
 def test_tokenize_with_end_punct_edge_cases():
@@ -187,7 +184,7 @@ def test_can_place_word_overlapping_correctly():
 
 def test_build_block_with_no_intersections():
     tokens = ["ПЫЛ", "АННЫЙ"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem = build_block(tokens)
     assert rem == ["АННЫЙ"]
     # Проверяем, что сетка не пустая, и в ней только первое слово (вертикальное)
     assert grid != {}
@@ -215,9 +212,8 @@ def test_render_grid_empty_grid():
 
 def test_build_block_single_word_with_end_punctuation():
     tokens = ["СЛОВО!"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem = build_block(tokens)
     assert rem == []
-    assert punct == ""
     # В сетке должно быть слово вертикально
     for i, ch in enumerate("СЛОВО!"):
         assert grid.get((i, 0), None) == ch
@@ -225,9 +221,8 @@ def test_build_block_single_word_with_end_punctuation():
 
 def test_build_block_with_split_punctuation_insertion():
     tokens = ["Тест", ",", "Пункт"]
-    grid, rem, punct = build_block(tokens)
+    grid, rem = build_block(tokens)
     # Пунктуация должна быть отделена
-    assert punct == ""
     # Остаток должен начинаться с второго слова без запятой
     assert rem == [",", "Пункт"]
 

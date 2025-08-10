@@ -50,3 +50,9 @@ def render_grid(grid: dict[tuple[int, int], str]) -> str:
             line.append(grid.get((r, c), " "))
         lines.append(" ".join(line).rstrip())
     return "\n".join(lines)
+
+
+def get_first_dict_element[Key, Value](dictionary: dict[Key, Value]):
+    first_key = list(dictionary.keys())[0]
+    first_value = dictionary[first_key]
+    return first_key, first_value
