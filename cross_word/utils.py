@@ -8,29 +8,32 @@ TokenList = list[str]
 END_PUNCTUATION = {".", "?", "!"}
 SPLIT_PUNCTUATION = {",", "—", ";", ":"}
 
+ZERO_WIDTH_SPACE = "​"
+
 DIRECTION_DOWN = "down"
 DIRECTION_ACROSS = "across"
 
 WORD_PATTERN = re.compile(r"[\wА-Яа-яЁё]")
 TOKENIZE_PATTERN = re.compile(r"[А-Яа-яЁё\w0-9-]+|[^\s]")
 
+
 def tokenize_with_end_punct(phrase: str) -> TokenList:
     """
     Tokenize input phrase into words with attached end punctuation.
-    
+
     Args:
         phrase: Input string to tokenize
-        
+
     Returns:
         List of tokens with punctuation properly attached to words
     """
     raw_tokens = TOKENIZE_PATTERN.findall(phrase)
     tokens: TokenList = []
     i = 0
-    
+
     while i < len(raw_tokens):
         current_token = raw_tokens[i]
-        
+
         if is_word(current_token):
             # Check if next token is end punctuation to attach
             if i + 1 < len(raw_tokens) and is_end_punctuation(raw_tokens[i + 1]):
@@ -41,8 +44,9 @@ def tokenize_with_end_punct(phrase: str) -> TokenList:
         else:
             tokens.append(current_token)
         i += 1
-        
+
     return tokens
+
 
 def is_word(token: str) -> bool:
     """Check if a token is a word (contains letters or numbers)."""
@@ -150,6 +154,8 @@ def render_grid(grid: Grid) -> str:
         line = []
         for col in range(min_col, max_col + 1):
             line.append(grid.get((row, col), " "))
+        if row == min_row and line[0] == " ":
+            line[0] = ZERO_WIDTH_SPACE
         lines.append(" ".join(line).rstrip())
 
     return "\n".join(lines)
